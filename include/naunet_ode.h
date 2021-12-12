@@ -5,10 +5,17 @@
 #include <sundials/sundials_nvector.h>
 #include <sundials/sundials_types.h>  // defs. of realtype, sunindextype
 
+#include "naunet_macros.h"
 #include "naunet_data.h"
 
 /* */
 int EvalRates(realtype *k, realtype *y, NaunetData *user_data);
+#if NHEATPROCS
+int EvalHeatingRates(realtype *kc, realtype *y, NaunetData *user_data);
+#endif
+#if NCOOLPROCS
+int EvalCoolingRates(realtype *kc, realtype *y, NaunetData *user_data);
+#endif
 /* */
 int Fex(realtype t, N_Vector u, N_Vector udot, void *user_data);
 int Jac(realtype t, N_Vector u, N_Vector fu, SUNMatrix jmatrix, void *user_data,

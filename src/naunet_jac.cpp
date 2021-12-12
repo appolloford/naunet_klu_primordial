@@ -34,6 +34,16 @@ int Jac(realtype t, N_Vector u, N_Vector fu, SUNMatrix jmatrix, void *user_data,
     realtype k[NREACTIONS] = {0.0};
     EvalRates(k, y, u_data);
 
+#if NHEATPROCS
+    realtype kh[NHEATPROCS] = {0.0};
+    EvalHeatingRates(kh, y, u_data);
+#endif 
+
+#if NCOOLPROCS
+    realtype kc[NCOOLPROCS] = {0.0};
+    EvalCoolingRates(kc, y, u_data);
+#endif
+
     // clang-format off
     // number of non-zero elements in each row
     rowptrs[0] = 0;
@@ -307,50 +317,18 @@ int Jac(realtype t, N_Vector u, N_Vector fu, SUNMatrix jmatrix, void *user_data,
         k[8]*y[IDX_HI] - k[15]*y[IDX_H2I] + k[15]*y[IDX_H2I] - k[17]*y[IDX_HM] +
         k[17]*y[IDX_HM] + k[17]*y[IDX_HM] - k[22]*y[IDX_H2II] -
         k[23]*y[IDX_H2II] - k[37]*y[IDX_DII];
-    data[87] = 0.0 - 1.27e-21 * sqrt(y[IDX_TGAS]) / (1.0 +
-        sqrt(y[IDX_TGAS]/1e5)) * exp(-1.578091e5/y[IDX_TGAS])*y[IDX_eM] -
-        9.1e-27 * pow(y[IDX_TGAS], -0.1687) / (1.0+sqrt(y[IDX_TGAS]/1e5)) *
-        exp(-1.3179e4/y[IDX_TGAS])*y[IDX_eM]*y[IDX_eM];
-    data[88] = 0.0 - 8.7e-27 * sqrt(y[IDX_TGAS]) * pow(y[IDX_TGAS]/1e3,
-        -0.2) / (1.0+pow(y[IDX_TGAS]/1e6, 0.7))*y[IDX_eM];
-    data[89] = 0.0 - 9.38e-22 * sqrt(y[IDX_TGAS]) / (1.0 +
-        sqrt(y[IDX_TGAS]/1e5)) * exp(-2.853354e5/y[IDX_TGAS])*y[IDX_eM];
-    data[90] = 0.0 - 4.95e-22 * sqrt(y[IDX_TGAS]) / (1.0 +
-        sqrt(y[IDX_TGAS]/1e5)) * exp(-6.31515e5/y[IDX_TGAS])*y[IDX_eM] -
-        5.01e-27 * pow(y[IDX_TGAS], -0.1687) / (1.0 + sqrt(y[IDX_TGAS]/1e5)) *
-        exp(-5.5338e4/y[IDX_TGAS])*y[IDX_eM]*y[IDX_eM] - 1.24e-13 *
-        pow(y[IDX_TGAS], -1.5) * exp(-4.7e5/y[IDX_TGAS]) *
-        (1.0+0.3*exp(-9.4e4/y[IDX_TGAS]))*y[IDX_eM] - 1.55e-26 *
-        pow(y[IDX_TGAS], 0.3647)*y[IDX_eM] - 5.54e-17 * pow(y[IDX_TGAS], -.0397)
-        / (1.0+sqrt(y[IDX_TGAS]/1e5)) *exp(-4.73638e5/y[IDX_TGAS])*y[IDX_eM] -
-        5.54e-17 * pow(y[IDX_TGAS], -.0397) / (1.0+sqrt(y[IDX_TGAS]/1e5))
-        *exp(-4.73638e5/y[IDX_TGAS])*y[IDX_eM];
-    data[91] = 0.0 - 3.48e-26 * sqrt(y[IDX_TGAS]) * pow(y[IDX_TGAS]/1e3,
-        -0.2) / (1.0+pow(y[IDX_TGAS]/1e6, 0.7))*y[IDX_eM];
-    data[92] = (gamma - 1.0) * (0.0 - 1.27e-21 * sqrt(y[IDX_TGAS]) / (1.0 +
-        sqrt(y[IDX_TGAS]/1e5)) * exp(-1.578091e5/y[IDX_TGAS])*y[IDX_HI] -
-        9.38e-22 * sqrt(y[IDX_TGAS]) / (1.0 + sqrt(y[IDX_TGAS]/1e5)) *
-        exp(-2.853354e5/y[IDX_TGAS])*y[IDX_HeI] - 4.95e-22 * sqrt(y[IDX_TGAS]) /
-        (1.0 + sqrt(y[IDX_TGAS]/1e5)) * exp(-6.31515e5/y[IDX_TGAS])*y[IDX_HeII]
-        - 5.01e-27 * pow(y[IDX_TGAS], -0.1687) / (1.0 + sqrt(y[IDX_TGAS]/1e5)) *
-        exp(-5.5338e4/y[IDX_TGAS])*y[IDX_HeII]*y[IDX_eM] - 5.01e-27 *
-        pow(y[IDX_TGAS], -0.1687) / (1.0 + sqrt(y[IDX_TGAS]/1e5)) *
-        exp(-5.5338e4/y[IDX_TGAS])*y[IDX_HeII]*y[IDX_eM] - 8.7e-27 *
-        sqrt(y[IDX_TGAS]) * pow(y[IDX_TGAS]/1e3, -0.2) /
-        (1.0+pow(y[IDX_TGAS]/1e6, 0.7))*y[IDX_HII] - 1.24e-13 * pow(y[IDX_TGAS],
-        -1.5) * exp(-4.7e5/y[IDX_TGAS]) *
-        (1.0+0.3*exp(-9.4e4/y[IDX_TGAS]))*y[IDX_HeII] - 1.55e-26 *
-        pow(y[IDX_TGAS], 0.3647)*y[IDX_HeII] - 3.48e-26 * sqrt(y[IDX_TGAS]) *
-        pow(y[IDX_TGAS]/1e3, -0.2) / (1.0+pow(y[IDX_TGAS]/1e6,
-        0.7))*y[IDX_HeIII] - 9.1e-27 * pow(y[IDX_TGAS], -0.1687) /
-        (1.0+sqrt(y[IDX_TGAS]/1e5)) *
-        exp(-1.3179e4/y[IDX_TGAS])*y[IDX_HI]*y[IDX_eM] - 9.1e-27 *
-        pow(y[IDX_TGAS], -0.1687) / (1.0+sqrt(y[IDX_TGAS]/1e5)) *
-        exp(-1.3179e4/y[IDX_TGAS])*y[IDX_HI]*y[IDX_eM] - 5.54e-17 *
-        pow(y[IDX_TGAS], -.0397) / (1.0+sqrt(y[IDX_TGAS]/1e5))
-        *exp(-4.73638e5/y[IDX_TGAS])*y[IDX_HeII] - 5.54e-17 * pow(y[IDX_TGAS],
-        -.0397) / (1.0+sqrt(y[IDX_TGAS]/1e5))
-        *exp(-4.73638e5/y[IDX_TGAS])*y[IDX_HeII] ) / kerg / GetNumDens(y);
+    data[87] = 0.0 - kc[0]*y[IDX_eM] - kc[8]*y[IDX_eM]*y[IDX_eM];
+    data[88] = 0.0 - kc[4]*y[IDX_eM];
+    data[89] = 0.0 - kc[1]*y[IDX_eM];
+    data[90] = 0.0 - kc[2]*y[IDX_eM] - kc[3]*y[IDX_eM]*y[IDX_eM] -
+        kc[5]*y[IDX_eM] - kc[6]*y[IDX_eM] - kc[9]*y[IDX_eM] - kc[10]*y[IDX_eM];
+    data[91] = 0.0 - kc[7]*y[IDX_eM];
+    data[92] = (gamma - 1.0) * (0.0 - kc[0]*y[IDX_HI] - kc[1]*y[IDX_HeI] -
+        kc[2]*y[IDX_HeII] - kc[3]*y[IDX_HeII]*y[IDX_eM] -
+        kc[3]*y[IDX_HeII]*y[IDX_eM] - kc[4]*y[IDX_HII] - kc[5]*y[IDX_HeII] -
+        kc[6]*y[IDX_HeII] - kc[7]*y[IDX_HeIII] - kc[8]*y[IDX_HI]*y[IDX_eM] -
+        kc[8]*y[IDX_HI]*y[IDX_eM] - kc[9]*y[IDX_HeII] - kc[10]*y[IDX_HeII] ) /
+        kerg / GetNumDens(y);
     
     // clang-format on
 

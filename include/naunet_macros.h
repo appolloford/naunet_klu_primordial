@@ -8,6 +8,8 @@
 #define NSPECIES 13
 #define NEQUATIONS 14
 #define NREACTIONS 38
+#define NHEATPROCS 0
+#define NCOOLPROCS 11
 #define NNZ 93
 
 #define IDX_DI 0

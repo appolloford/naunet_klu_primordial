@@ -155,3 +155,85 @@ int EvalRates(realtype *k, realtype *y, NaunetData *u_data) {
 
     return NAUNET_SUCCESS;
 }
+
+// clang-format off
+int EvalHeatingRates(realtype *kh, realtype *y, NaunetData *u_data) {
+
+    realtype nH = u_data->nH;
+    realtype Tgas = u_data->Tgas;
+    
+    
+    // clang-format on
+
+    // Some variable definitions from krome
+    realtype Te      = Tgas * 8.617343e-5;            // Tgas in eV (eV)
+    realtype lnTe    = log(Te);                       // ln of Te (#)
+    realtype T32     = Tgas * 0.0033333333333333335;  // Tgas/(300 K) (#)
+    realtype invT    = 1.0 / Tgas;                    // inverse of T (1/K)
+    realtype invTe   = 1.0 / Te;                      // inverse of T (1/eV)
+    realtype sqrTgas = sqrt(Tgas);  // Tgas rootsquare (K**0.5)
+
+    // reaaction rate (k) of each reaction
+    // clang-format off
+    
+    // clang-format on
+
+    return NAUNET_SUCCESS;
+}
+
+// clang-format off
+int EvalCoolingRates(realtype *kc, realtype *y, NaunetData *u_data) {
+
+    realtype nH = u_data->nH;
+    realtype Tgas = u_data->Tgas;
+    
+    
+    // clang-format on
+
+    // Some variable definitions from krome
+    realtype Te      = Tgas * 8.617343e-5;            // Tgas in eV (eV)
+    realtype lnTe    = log(Te);                       // ln of Te (#)
+    realtype T32     = Tgas * 0.0033333333333333335;  // Tgas/(300 K) (#)
+    realtype invT    = 1.0 / Tgas;                    // inverse of T (1/K)
+    realtype invTe   = 1.0 / Te;                      // inverse of T (1/eV)
+    realtype sqrTgas = sqrt(Tgas);  // Tgas rootsquare (K**0.5)
+
+    // reaaction rate (k) of each reaction
+    // clang-format off
+    kc[0] = 1.27e-21 * sqrt(y[IDX_TGAS]) / (1.0 + sqrt(y[IDX_TGAS]/1e5)) *
+        exp(-1.578091e5/y[IDX_TGAS]);
+        
+    kc[1] = 9.38e-22 * sqrt(y[IDX_TGAS]) / (1.0 + sqrt(y[IDX_TGAS]/1e5)) *
+        exp(-2.853354e5/y[IDX_TGAS]);
+        
+    kc[2] = 4.95e-22 * sqrt(y[IDX_TGAS]) / (1.0 + sqrt(y[IDX_TGAS]/1e5)) *
+        exp(-6.31515e5/y[IDX_TGAS]);
+        
+    kc[3] = 5.01e-27 * pow(y[IDX_TGAS], -0.1687) / (1.0 +
+        sqrt(y[IDX_TGAS]/1e5)) * exp(-5.5338e4/y[IDX_TGAS]);
+        
+    kc[4] = 8.7e-27 * sqrt(y[IDX_TGAS]) * pow(y[IDX_TGAS]/1e3, -0.2) /
+        (1.0+pow(y[IDX_TGAS]/1e6, 0.7));
+        
+    kc[5] = 1.24e-13 * pow(y[IDX_TGAS], -1.5) * exp(-4.7e5/y[IDX_TGAS]) *
+        (1.0+0.3*exp(-9.4e4/y[IDX_TGAS]));
+        
+    kc[6] = 1.55e-26 * pow(y[IDX_TGAS], 0.3647);
+        
+    kc[7] = 3.48e-26 * sqrt(y[IDX_TGAS]) * pow(y[IDX_TGAS]/1e3, -0.2) /
+        (1.0+pow(y[IDX_TGAS]/1e6, 0.7));
+        
+    kc[8] = 9.1e-27 * pow(y[IDX_TGAS], -0.1687) /
+        (1.0+sqrt(y[IDX_TGAS]/1e5)) * exp(-1.3179e4/y[IDX_TGAS]);
+        
+    kc[9] = 5.54e-17 * pow(y[IDX_TGAS], -.0397) /
+        (1.0+sqrt(y[IDX_TGAS]/1e5)) *exp(-4.73638e5/y[IDX_TGAS]);
+        
+    kc[10] = 5.54e-17 * pow(y[IDX_TGAS], -.0397) /
+        (1.0+sqrt(y[IDX_TGAS]/1e5)) *exp(-4.73638e5/y[IDX_TGAS]);
+        
+    
+    // clang-format on
+
+    return NAUNET_SUCCESS;
+}
