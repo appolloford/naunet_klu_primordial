@@ -1,0 +1,37 @@
+# Naunet config document
+
+[general]
+creation_time = "12/12/2021 14:23:08"
+name = "naunet_klu_primordial"
+description = "example"
+
+[chemistry]
+elements = ["e", "H", "D", "He", "GRAIN"]
+pseudo_elements = []
+species = ["e-", "H", "H+", "H-", "D", "D+", "He", "He+", "He++", "H2", "H2+", "HD", "GRAIN"]
+extra_species = []
+network = "primordial.krome"
+database = "krome"
+heating = []
+cooling = ["CIC_HI", "CIC_HeI", "CIC_HeII", "CIC_He_2S", "RC_HII", "RC_HeI", "RC_HeII", "RC_HeIII", "CEC_HI", "CEC_HeI", "CEC_HeII"]
+rate_modifier = []
+ode_modifier = []
+
+[chemistry.dust]
+type = "none"
+
+[chemistry.binding_energy]
+
+[chemistry.photon_yield]
+
+[chemistry.shielding]
+
+[ODEsolver]
+solver = "cvode"
+device = "cpu"
+method = "sparse"
+
+[summary]
+num_of_species = 13
+num_of_reactions = 38
+list_of_species = ["D", "D+", "GRAIN", "H", "H+", "H-", "H2", "H2+", "HD", "He", "He+", "He++", "e-"]
