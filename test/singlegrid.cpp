@@ -43,7 +43,7 @@ int main() {
     double rates[NREACTIONS];
 #endif
 
-    double logtstart = 3.0, logtend = 8.0;
+    double logtstart = 3.0, logtend = 3.2;
     double dtyr = 0.0, time = 0.0;
     for (double logtime = logtstart; logtime < logtend; logtime += 0.1) {
 #ifdef NAUNET_DEBUG

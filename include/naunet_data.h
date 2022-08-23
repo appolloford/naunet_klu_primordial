@@ -1,3 +1,4 @@
+// 
 #ifndef __NAUNET_DATA_H__
 #define __NAUNET_DATA_H__
 
@@ -6,9 +7,9 @@ struct NaunetData {
     // clang-format off
     double nH;
     double Tgas;
+    double mu = -1.000e+00;
+    double gamma = -1.000e+00;
     
-    double mu = -1;
-    double gamma = -1;
     // clang-format on
 };
 

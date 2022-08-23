@@ -1,6 +1,6 @@
 # To use CUDA by enabling language
 cmake_minimum_required(VERSION 3.18)
-project(NAUNET VERSION 0.2.0 LANGUAGES CXX)
+project(NAUNET VERSION 0.3.0 LANGUAGES CXX)
 
 include(CMakePrintHelpers)
 
@@ -26,6 +26,8 @@ set(SUNDIALS_MIN_VERSION "5.6.1")
 set(SUNDIALS_DIR "" CACHE PATH "Path to SUNDIALSConfig.cmake")
 find_package(SUNDIALS ${SUNDIALS_MIN_VERSION} REQUIRED CONFIG)
 
+message(STATUS "SUNDIALS_FOUND             = ${SUNDIALS_FOUND}")
+
 list(APPEND SUNDIALSLIB
     SUNDIALS::cvode
     SUNDIALS::sunlinsolklu
@@ -50,14 +52,17 @@ message(STATUS "NVIDIA_GPU_COUNT           = " ${NVIDIA_GPU_COUNT})
 set(MAKE_STATIC ON CACHE BOOL "")
 set(MAKE_SHARED ON CACHE BOOL "")
 set(MAKE_PYTHON OFF CACHE BOOL "")
+set(MAKE_TEST ON CACHE BOOL "")
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 if(MAKE_PYTHON)
-    set(PYMODNAME "chemistry" CACHE STRING "")
-    find_package(PythonInterp REQUIRED)
+    set(PYMODNAME "pynaunet" CACHE STRING "")
+    find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
 endif()
 
-enable_testing()
-
 add_subdirectory(src)
-add_subdirectory(test)
+
+if(MAKE_TEST)
+    enable_testing()
+    add_subdirectory(tests)
+endif()

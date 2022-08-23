@@ -3,14 +3,18 @@
 #include <nvector/nvector_serial.h>
 #include <sunmatrix/sunmatrix_sparse.h>  // access to sparse SUNMatrix
 /* */
-/*  */
-#include "naunet_ode.h"
-/*  */
 #include "naunet_constants.h"
 #include "naunet_macros.h"
+#include "naunet_ode.h"
 #include "naunet_physics.h"
 
 #define IJth(A, i, j) SM_ELEMENT_D(A, i, j)
+#define NVEC_CUDA_CONTENT(x) ((N_VectorContent_Cuda)(x->content))
+#define NVEC_CUDA_STREAM(x) (NVEC_CUDA_CONTENT(x)->stream_exec_policy->stream())
+#define NVEC_CUDA_BLOCKSIZE(x) \
+    (NVEC_CUDA_CONTENT(x)->stream_exec_policy->blockSize())
+#define NVEC_CUDA_GRIDSIZE(x, n) \
+    (NVEC_CUDA_CONTENT(x)->stream_exec_policy->gridSize(n))
 
 /* */
 
@@ -22,12 +26,15 @@ int Fex(realtype t, N_Vector u, N_Vector udot, void *user_data) {
     // clang-format off
     realtype nH = u_data->nH;
     realtype Tgas = u_data->Tgas;
-    
     realtype mu = u_data->mu;
     realtype gamma = u_data->gamma;
     
+    
+#if (NHEATPROCS || NCOOLPROCS)
     if (mu < 0) mu = GetMu(y);
     if (gamma < 0) gamma = GetGamma(y);
+#endif
+
     // clang-format on
 
     realtype k[NREACTIONS] = {0.0};
@@ -36,7 +43,7 @@ int Fex(realtype t, N_Vector u, N_Vector udot, void *user_data) {
 #if NHEATPROCS
     realtype kh[NHEATPROCS] = {0.0};
     EvalHeatingRates(kh, y, u_data);
-#endif 
+#endif
 
 #if NCOOLPROCS
     realtype kc[NCOOLPROCS] = {0.0};
@@ -51,11 +58,6 @@ int Fex(realtype t, N_Vector u, N_Vector udot, void *user_data) {
     ydot[IDX_DII] = 0.0 + k[29]*y[IDX_HII]*y[IDX_DI] -
         k[30]*y[IDX_HI]*y[IDX_DII] - k[31]*y[IDX_H2I]*y[IDX_DII] +
         k[32]*y[IDX_HDI]*y[IDX_HII] - k[37]*y[IDX_DII]*y[IDX_eM];
-    ydot[IDX_GRAINI] = 0.0 + k[1]*y[IDX_HII]*y[IDX_eM] +
-        k[2]*y[IDX_HII]*y[IDX_eM] + k[4]*y[IDX_HeII]*y[IDX_eM] +
-        k[5]*y[IDX_HeII]*y[IDX_eM] + k[7]*y[IDX_HeIII]*y[IDX_eM] +
-        k[8]*y[IDX_HI]*y[IDX_eM] + k[11]*y[IDX_HI]*y[IDX_HII] +
-        k[12]*y[IDX_HI]*y[IDX_HII];
     ydot[IDX_HI] = 0.0 - k[0]*y[IDX_HI]*y[IDX_eM] +
         k[1]*y[IDX_HII]*y[IDX_eM] + k[2]*y[IDX_HII]*y[IDX_eM] -
         k[8]*y[IDX_HI]*y[IDX_eM] - k[9]*y[IDX_HM]*y[IDX_HI] -
@@ -151,10 +153,11 @@ int Fex(realtype t, N_Vector u, N_Vector udot, void *user_data) {
         GetNumDens(y);
     
     
-#if NAUNET_DEBUG
+#if ((NHEATPROCS || NCOOLPROCS) && NAUNET_DEBUG)
     printf("Total heating/cooling rate: %13.7e\n", ydot[IDX_TGAS]);
 #endif
-// clang-format on
+
+    // clang-format on
 
     /* */
 

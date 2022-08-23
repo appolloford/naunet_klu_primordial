@@ -1,24 +1,24 @@
 # Naunet config document
 
 [general]
-creation_time = "12/12/2021 14:44:03"
+creation_time = "31/05/2022 12:14:33"
 name = "naunet_klu_primordial"
-description = "example"
+description = "Example: primordial chemical network from KROME"
 
 [chemistry]
-elements = ["e", "H", "D", "He", "GRAIN"]
-pseudo_elements = []
-species = ["e-", "H", "H+", "H-", "D", "D+", "He", "He+", "He++", "H2", "H2+", "HD", "GRAIN"]
+elements = ["e", "H", "D", "He"]
+pseudo_elements = ["Photon"]
+species = ["e-", "H", "H+", "H-", "D", "D+", "He", "He+", "He++", "H2", "H2+", "HD", "Photon"]
 extra_species = []
-network = "primordial.krome"
-database = "krome"
+network = ["primordial.krome"]
+format = ["krome"]
 heating = []
 cooling = ["CIC_HI", "CIC_HeI", "CIC_HeII", "CIC_He_2S", "RC_HII", "RC_HeI", "RC_HeII", "RC_HeIII", "CEC_HI", "CEC_HeI", "CEC_HeII"]
-rate_modifier = []
 ode_modifier = []
 
 [chemistry.dust]
-type = "none"
+model = "none"
+species = []
 
 [chemistry.binding_energy]
 
@@ -26,12 +26,22 @@ type = "none"
 
 [chemistry.shielding]
 
+[chemistry.rate_modifier]
+
 [ODEsolver]
 solver = "cvode"
 device = "cpu"
 method = "sparse"
 
 [summary]
-num_of_species = 13
+num_of_species = 12
+num_of_gas_species = 12
+num_of_ice_species = 0
+num_of_dust_species = 0
 num_of_reactions = 38
-list_of_species = ["D", "D+", "GRAIN", "H", "H+", "H-", "H2", "H2+", "HD", "He", "He+", "He++", "e-"]
+list_of_species = ["D", "D+", "H", "H+", "H-", "H2", "H2+", "HD", "He", "He+", "He++", "e-"]
+list_of_species_alias = ["DI", "DII", "HI", "HII", "HM", "H2I", "H2II", "HDI", "HeI", "HeII", "HeIII", "eM"]
+list_of_gas_species = ["D", "D+", "H", "H+", "H-", "H2", "H2+", "HD", "He", "He+", "He++", "e-"]
+list_of_ice_species = []
+list_of_dust_species = []
+

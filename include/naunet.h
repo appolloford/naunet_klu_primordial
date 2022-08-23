@@ -20,9 +20,24 @@ class Naunet {
    public:
     Naunet();
     ~Naunet();
-    int Init(int nsystem = 1, double atol = 1e-20, double rtol = 1e-5);
     int Finalize();
-    /* */
+    int Init(int nsystem = MAX_NSYSTEMS, double atol = 1e-20,
+             double rtol = 1e-5, int mxsteps = 500);
+    int PrintDebugInfo();
+#ifdef IDX_ELEM_H
+    // Renormalize the species abundances accroding to `ab_ref_`(private).
+    // This conserves the element fractions but does not change the overall
+    // density/
+    int Renorm(realtype *ab);
+#endif
+    int Reset(int nsystem = MAX_NSYSTEMS, double atol = 1e-20,
+              double rtol = 1e-5, int mxsteps = 500);
+#ifdef IDX_ELEM_H
+    // Set the reference abundance `ab_ref_`. `opt == 0` assumes that the input
+    // is element abundances. `opt == 1` assumes the input is species
+    // abundances.
+    int SetReferenceAbund(realtype *ref, int opt = 0);
+#endif
     int Solve(realtype *ab, realtype dt, NaunetData *data);
 #ifdef PYMODULE
     py::array_t<realtype> PyWrapSolve(py::array_t<realtype> arr, realtype dt,
@@ -31,16 +46,30 @@ class Naunet {
 
    private:
     int n_system_;
+    int mxsteps_;
     realtype atol_;
     realtype rtol_;
+    FILE *errfp_;
+    realtype ab_ref_[NELEMENTS];
 
-    // NaunetData *m_data;
+    /*  */
+
     N_Vector cv_y_;
     SUNMatrix cv_a_;
     void *cv_mem_;
     SUNLinearSolver cv_ls_;
 
+    realtype ab_init_[NEQUATIONS];
+    realtype ab_tmp_[NEQUATIONS];  // Temporary state for error handling
+
     /*  */
+
+    int GetCVStates(void *cv_mem, long int &nst, long int &nfe,
+                    long int &nsetups, long int &nje, long int &netf,
+                    long int &nge, long int &nni, long int &ncfn);
+    int HandleError(int flag, realtype *ab, realtype dt, realtype t0);
+    static int CheckFlag(void *flagvalue, const char *funcname, int opt,
+                         FILE *errf);
 };
 
 #ifdef PYMODULE
@@ -49,11 +78,13 @@ PYBIND11_MODULE(PYMODNAME, m) {
     py::class_<Naunet>(m, "Naunet")
         .def(py::init())
         .def("Init", &Naunet::Init, py::arg("nsystem") = 1,
-             py::arg("atol") = 1e-20, py::arg("rtol") = 1e-5)
+             py::arg("atol") = 1e-20, py::arg("rtol") = 1e-5,
+             py::arg("mxsteps") = 500)
         .def("Finalize", &Naunet::Finalize)
 #ifdef USE_CUDA
         .def("Reset", &Naunet::Reset, py::arg("nsystem") = 1,
-             py::arg("atol") = 1e-20, py::arg("rtol") = 1e-5)
+             py::arg("atol") = 1e-20, py::arg("rtol") = 1e-5,
+             py::arg("mxsteps") = 500)
 #endif
         .def("Solve", &Naunet::PyWrapSolve);
 
@@ -62,6 +93,8 @@ PYBIND11_MODULE(PYMODNAME, m) {
         .def(py::init())
         .def_readwrite("nH", &NaunetData::nH)
         .def_readwrite("Tgas", &NaunetData::Tgas)
+        .def_readwrite("mu", &NaunetData::mu)
+        .def_readwrite("gamma", &NaunetData::gamma)
         ;
     // clang-format on
 }

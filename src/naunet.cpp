@@ -1,62 +1,220 @@
 #include <cvode/cvode.h>  // prototypes for CVODE fcts., consts.
 /* */
 #include <nvector/nvector_serial.h>      // access to serial N_Vector
+#include <sunlinsol/sunlinsol_dense.h>   // access to dense SUNLinearSolver
 #include <sunlinsol/sunlinsol_klu.h>     // access to KLU sparse direct solver
 #include <sunmatrix/sunmatrix_sparse.h>  // access to sparse SUNMatrix
 /* */
-/*  */
 #include "naunet.h"
-/*  */
 #include "naunet_ode.h"
+#include "naunet_physics.h"
+/* */
 
-// check_flag function is from the cvDiurnals_ky.c example from the CVODE
-// package. Check function return value...
+#define IJth(A, i, j) SM_ELEMENT_D(A, i, j)
+
+Naunet::Naunet(){};
+
+Naunet::~Naunet(){};
+
+// Adaptedfrom the cvDiurnals_ky.c example from the CVODE package.
+// Check function return value...
 //   opt == 0 means SUNDIALS function allocates memory so check if
 //            returned NULL pointer
 //   opt == 1 means SUNDIALS function returns a flag so check if
 //            flag >= 0
 //   opt == 2 means function allocates memory so check if returned
 //            NULL pointer
-static int check_flag(void *flagvalue, const char *funcname, int opt) {
+int Naunet::CheckFlag(void *flagvalue, const char *funcname, int opt,
+                      FILE *errf) {
     int *errflag;
 
     /* Check if SUNDIALS function returned NULL pointer - no memory allocated */
     if (opt == 0 && flagvalue == NULL) {
-        fprintf(stderr,
+        fprintf(errf,
                 "\nSUNDIALS_ERROR: %s() failed - returned NULL pointer\n\n",
                 funcname);
-        return 1;
+        return NAUNET_FAIL;
     }
 
     /* Check if flag < 0 */
     else if (opt == 1) {
         errflag = (int *)flagvalue;
         if (*errflag < 0) {
-            fprintf(stderr, "\nSUNDIALS_ERROR: %s() failed with flag = %d\n\n",
+            fprintf(errf, "\nSUNDIALS_ERROR: %s() failed with flag = %d\n\n",
                     funcname, *errflag);
-            return 1;
+            return NAUNET_FAIL;
         }
     }
 
     /* Check if function returned NULL pointer - no memory allocated */
     else if (opt == 2 && flagvalue == NULL) {
-        fprintf(stderr,
-                "\nMEMORY_ERROR: %s() failed - returned NULL pointer\n\n",
+        fprintf(errf, "\nMEMORY_ERROR: %s() failed - returned NULL pointer\n\n",
                 funcname);
-        return 1;
+        return NAUNET_FAIL;
     }
 
-    return 0;
+    return NAUNET_SUCCESS;
+};
+
+int Naunet::Finalize() {
+    /* */
+
+    N_VDestroy(cv_y_);
+    // N_VFreeEmpty(cv_y_);
+    SUNMatDestroy(cv_a_);
+    SUNLinSolFree(cv_ls_);
+    // delete m_data;
+
+    /*  */
+
+    fclose(errfp_);
+
+    return NAUNET_SUCCESS;
+};
+
+int Naunet::GetCVStates(void *cv_mem, long int &nst, long int &nfe,
+                        long int &nsetups, long int &nje, long int &netf,
+                        long int &nge, long int &nni, long int &ncfn) {
+    int flag;
+
+    flag = CVodeGetNumSteps(cv_mem, &nst);
+    if (CheckFlag(&flag, "CVodeGetNumSteps", 1, errfp_) == NAUNET_FAIL) {
+        return NAUNET_FAIL;
+    }
+
+    flag = CVodeGetNumRhsEvals(cv_mem, &nfe);
+    if (CheckFlag(&flag, "CVodeGetNumRhsEvals", 1, errfp_) == NAUNET_FAIL) {
+        return NAUNET_FAIL;
+    }
+
+    flag = CVodeGetNumLinSolvSetups(cv_mem, &nsetups);
+    if (CheckFlag(&flag, "CVodeGetNumLinSolvSetups", 1, errfp_) ==
+        NAUNET_FAIL) {
+        return NAUNET_FAIL;
+    }
+
+    flag = CVodeGetNumErrTestFails(cv_mem, &netf);
+    if (CheckFlag(&flag, "CVodeGetNumErrTestFails", 1, errfp_) == NAUNET_FAIL) {
+        return NAUNET_FAIL;
+    }
+
+    flag = CVodeGetNumNonlinSolvIters(cv_mem, &nni);
+    if (CheckFlag(&flag, "CVodeGetNumNonlinSolvIters", 1, errfp_) ==
+        NAUNET_FAIL) {
+        return NAUNET_FAIL;
+    }
+
+    flag = CVodeGetNumNonlinSolvConvFails(cv_mem, &ncfn);
+    if (CheckFlag(&flag, "CVodeGetNumNonlinSolvConvFails", 1, errfp_) ==
+        NAUNET_FAIL) {
+        return NAUNET_FAIL;
+    }
+
+    flag = CVodeGetNumJacEvals(cv_mem, &nje);
+    if (CheckFlag(&flag, "CVodeGetNumJacEvals", 1, errfp_) == NAUNET_FAIL) {
+        return NAUNET_FAIL;
+    }
+
+    flag = CVodeGetNumGEvals(cv_mem, &nge);
+    if (CheckFlag(&flag, "CVodeGetNumGEvals", 1, errfp_) == NAUNET_FAIL) {
+        return NAUNET_FAIL;
+    }
+
+    return NAUNET_SUCCESS;
+};
+
+int Naunet::HandleError(int cvflag, realtype *ab, realtype dt, realtype t0) {
+    if (cvflag >= 0) {
+        return NAUNET_SUCCESS;
+    }
+
+    fprintf(errfp_, "CVode failed in Naunet! Flag = %d\n", cvflag);
+    fprintf(errfp_, "Calling HandleError to fix the problem\n");
+
+    /* */
+
+    realtype dt_init = dt;
+
+    for (int level = 1; level < 6; level++) {
+        int nsubsteps = 10 * level;
+
+        if (cvflag < 0 && cvflag > -5) {
+            for (int i = 0; i < NEQUATIONS; i++) {
+                ab_tmp_[i] = ab[i];
+            }
+            dt -= t0;
+        } else if (cvflag == -6) {
+            // The state may have something wrong
+            // Reset to the initial state and try finer steps
+            for (int i = 0; i < NEQUATIONS; i++) {
+                ab_tmp_[i] = ab_init_[i];
+            }
+            dt = dt_init;
+        } else if (cvflag < 0) {
+            fprintf(
+                errfp_,
+                "The error cannot be recovered by Naunet! Exit from Naunet!\n");
+            fprintf(errfp_, "cvFlag = %d, level = %d\n", cvflag, level);
+            return NAUNET_FAIL;
+        }
+
+        // Reset initial conditions
+        t0 = 0.0;
+        for (int i = 0; i < NEQUATIONS; i++) {
+            ab[i] = ab_tmp_[i];
+        }
+
+        // Reinitialize
+        cvflag = CVodeReInit(cv_mem_, t0, cv_y_);
+        if (CheckFlag(&cvflag, "CVodeReInit", 1, errfp_) == NAUNET_FAIL) {
+            return NAUNET_FAIL;
+        }
+
+        for (int step = 0; step < nsubsteps; step++) {
+            realtype tout = pow(
+                10.0, log10(dt) * (realtype)(step + 1) / (realtype)nsubsteps);
+            // printf("tout: %13.7e, step: %d, level: %d\n", tout, step, level);
+            // realtype tcur = 0.0;
+            // cvflag = CVodeGetCurrentTime(cv_mem_, &tcur);
+            cvflag = CVode(cv_mem_, tout, cv_y_, &t0, CV_NORMAL);
+            if (cvflag < 0) {
+                fprintf(errfp_,
+                        "CVode failed in Naunet! Flag = %d in the %dth substep "
+                        "of %dth level! \n",
+                        cvflag, step, level);
+                if (level < 5) {
+                    fprintf(errfp_,
+                            "Tyring to fix the error in the next level\n");
+                }
+                // fprintf(errfp_, "Failed to fix the error! cvflag = %d in the
+                // %dth substep! \n", cvflag, i);
+                break;
+            }
+        }
+
+        // if CVode succeeded, leave the loop
+        if (cvflag >= 0) {
+            if (level > 0) {
+                fprintf(errfp_,
+                        "The error was successfully fixed in %dth level\n",
+                        level);
+            }
+            // break;
+            return NAUNET_SUCCESS;
+        }
+    }
+
+    /* */
+
+    return NAUNET_FAIL;
 }
 
-Naunet::Naunet(){};
-
-Naunet::~Naunet(){};
-
-int Naunet::Init(int nsystem, double atol, double rtol) {
+int Naunet::Init(int nsystem, double atol, double rtol, int mxsteps) {
     n_system_ = nsystem;
+    mxsteps_  = mxsteps;
     atol_     = atol;
     rtol_     = rtol;
+    errfp_    = fopen("naunet_error_record.txt", "a");
 
     /* */
     if (nsystem != 1) {
@@ -64,23 +222,11 @@ int Naunet::Init(int nsystem, double atol, double rtol) {
         return NAUNET_FAIL;
     }
 
-    cv_y_  = N_VNew_Serial((sunindextype)NEQUATIONS);
+    cv_y_  = N_VNewEmpty_Serial((sunindextype)NEQUATIONS);
     cv_a_  = SUNSparseMatrix(NEQUATIONS, NEQUATIONS, NNZ, CSR_MAT);
     cv_ls_ = SUNLinSol_KLU(cv_y_, cv_a_);
 
     /*  */
-
-    cv_mem_ = CVodeCreate(CV_BDF);
-
-    int flag;
-    flag = CVodeInit(cv_mem_, Fex, 0.0, cv_y_);
-    if (check_flag(&flag, "CVodeInit", 1)) return 1;
-    flag = CVodeSStolerances(cv_mem_, rtol_, atol_);
-    if (check_flag(&flag, "CVodeSStolerances", 1)) return 1;
-    flag = CVodeSetLinearSolver(cv_mem_, cv_ls_, cv_a_);
-    if (check_flag(&flag, "CVodeSetLinearSolver", 1)) return 1;
-    flag = CVodeSetJacFn(cv_mem_, Jac);
-    if (check_flag(&flag, "CVodeSetJacFn", 1)) return 1;
 
     // reset the n_vector to empty, maybe not necessary
     /* */
@@ -90,29 +236,155 @@ int Naunet::Init(int nsystem, double atol, double rtol) {
 
     /* */
 
+    /* */
+
     return NAUNET_SUCCESS;
 };
 
-int Naunet::Finalize() {
-    // N_VDestroy(cv_y_);
-    N_VFreeEmpty(cv_y_);
-    SUNMatDestroy(cv_a_);
-    CVodeFree(&cv_mem_);
-    SUNLinSolFree(cv_ls_);
-    // delete m_data;
+int Naunet::PrintDebugInfo() {
+    long int nst, nfe, nsetups, nje, netf, nge, nni, ncfn;
+    int flag;
+
+    /* */
+
+    if (GetCVStates(cv_mem_, nst, nfe, nsetups, nje, netf, nge, nni, ncfn) ==
+        NAUNET_FAIL) {
+        return NAUNET_FAIL;
+    }
+
+    printf("\nFinal Statistics:\n");
+    printf("nst = %-6ld nfe  = %-6ld nsetups = %-6ld nje = %ld\n", nst, nfe,
+           nsetups, nje);
+    printf("nni = %-6ld ncfn = %-6ld netf = %-6ld    nge = %ld\n \n", nni, ncfn,
+           netf, nge);
 
     /*  */
 
     return NAUNET_SUCCESS;
 };
 
-/*  */
+#ifdef IDX_ELEM_H
+int Naunet::Renorm(realtype *ab) {
+    N_Vector b     = N_VMake_Serial(NELEMENTS, ab_ref_);
+    N_Vector r     = N_VNew_Serial(NELEMENTS);
+    SUNMatrix A    = SUNDenseMatrix(NELEMENTS, NELEMENTS);
+    double Hnuclei = GetHNuclei(ab);
 
-int Naunet::Solve(realtype *ab, realtype dt, NaunetData *data) {
-    realtype t0 = 0.0;
+    N_VConst(0.0, r);
+    // clang-format off
+    IJth(A, IDX_ELEM_D, IDX_ELEM_D) = 0.0 + 2.0 * ab[IDX_DI] / 2.0 / Hnuclei
+        + 2.0 * ab[IDX_DII] / 2.0 / Hnuclei + 2.0 * ab[IDX_HDI] / 3.0 / Hnuclei;
+    IJth(A, IDX_ELEM_D, IDX_ELEM_H) = 0.0 + 1.0 * ab[IDX_HDI] / 3.0 /
+        Hnuclei;
+    IJth(A, IDX_ELEM_D, IDX_ELEM_He) = 0.0;
+    IJth(A, IDX_ELEM_H, IDX_ELEM_D) = 0.0 + 2.0 * ab[IDX_HDI] / 3.0 /
+        Hnuclei;
+    IJth(A, IDX_ELEM_H, IDX_ELEM_H) = 0.0 + 1.0 * ab[IDX_HI] / 1.0 / Hnuclei
+        + 1.0 * ab[IDX_HII] / 1.0 / Hnuclei + 1.0 * ab[IDX_HM] / 1.0 / Hnuclei +
+        4.0 * ab[IDX_H2I] / 2.0 / Hnuclei + 4.0 * ab[IDX_H2II] / 2.0 / Hnuclei +
+        1.0 * ab[IDX_HDI] / 3.0 / Hnuclei;
+    IJth(A, IDX_ELEM_H, IDX_ELEM_He) = 0.0;
+    IJth(A, IDX_ELEM_He, IDX_ELEM_D) = 0.0;
+    IJth(A, IDX_ELEM_He, IDX_ELEM_H) = 0.0;
+    IJth(A, IDX_ELEM_He, IDX_ELEM_He) = 0.0 + 4.0 * ab[IDX_HeI] / 4.0 /
+        Hnuclei + 4.0 * ab[IDX_HeII] / 4.0 / Hnuclei + 4.0 * ab[IDX_HeIII] / 4.0
+        / Hnuclei;
+    
+    // clang-format on
+
+    SUNLinearSolver LS = SUNLinSol_Dense(r, A);
+
     int flag;
+    flag = SUNLinSolSetup(LS, A);
+    if (CheckFlag(&flag, "SUNLinSolSetup", 1, errfp_) == NAUNET_FAIL) {
+        return NAUNET_FAIL;
+    }
+    flag = SUNLinSolSolve(LS, A, r, b, 0.0);
+    if (CheckFlag(&flag, "SUNLinSolSolve", 1, errfp_) == NAUNET_FAIL) {
+        return NAUNET_FAIL;
+    }
+
+    realtype *rptr = N_VGetArrayPointer(r);
+
+    // clang-format off
+    ab[IDX_DI] = (0.0 + 2.0 * rptr[IDX_ELEM_D] / 2.0) * ab[IDX_DI];
+    ab[IDX_DII] = (0.0 + 2.0 * rptr[IDX_ELEM_D] / 2.0) * ab[IDX_DII];
+    ab[IDX_HI] = (0.0 + 1.0 * rptr[IDX_ELEM_H] / 1.0) * ab[IDX_HI];
+    ab[IDX_HII] = (0.0 + 1.0 * rptr[IDX_ELEM_H] / 1.0) * ab[IDX_HII];
+    ab[IDX_HM] = (0.0 + 1.0 * rptr[IDX_ELEM_H] / 1.0) * ab[IDX_HM];
+    ab[IDX_H2I] = (0.0 + 2.0 * rptr[IDX_ELEM_H] / 2.0) * ab[IDX_H2I];
+    ab[IDX_H2II] = (0.0 + 2.0 * rptr[IDX_ELEM_H] / 2.0) * ab[IDX_H2II];
+    ab[IDX_HDI] = (0.0 + 2.0 * rptr[IDX_ELEM_D] / 3.0 + 1.0 * rptr[IDX_ELEM_H] / 3.0) * ab[IDX_HDI];
+    ab[IDX_HeI] = (0.0 + 4.0 * rptr[IDX_ELEM_He] / 4.0) * ab[IDX_HeI];
+    ab[IDX_HeII] = (0.0 + 4.0 * rptr[IDX_ELEM_He] / 4.0) * ab[IDX_HeII];
+    ab[IDX_HeIII] = (0.0 + 4.0 * rptr[IDX_ELEM_He] / 4.0) * ab[IDX_HeIII];
+    ab[IDX_eM] = (1.0) * ab[IDX_eM];
+    
+    // clang-format on
+
+    N_VDestroy(b);
+    N_VDestroy(r);
+    SUNMatDestroy(A);
+    SUNLinSolFree(LS);
+
+    return NAUNET_SUCCESS;
+};
+#endif
+
+// To reset the size of cusparse solver
+int Naunet::Reset(int nsystem, double atol, double rtol, int mxsteps) {
+    n_system_ = nsystem;
+    mxsteps_  = mxsteps;
+    atol_     = atol;
+    rtol_     = rtol;
 
     /* */
+    if (nsystem != 1) {
+        printf("This solver doesn't support nsystem > 1!");
+        return NAUNET_FAIL;
+    }
+
+    // N_VFreeEmpty(cv_y_);
+    N_VDestroy(cv_y_);
+    SUNMatDestroy(cv_a_);
+    SUNLinSolFree(cv_ls_);
+
+    cv_y_            = N_VNewEmpty_Serial((sunindextype)NEQUATIONS);
+    cv_a_            = SUNSparseMatrix(NEQUATIONS, NEQUATIONS, NNZ, CSR_MAT);
+    cv_ls_           = SUNLinSol_KLU(cv_y_, cv_a_);
+
+    /*  */
+
+    return NAUNET_SUCCESS;
+};
+
+#ifdef IDX_ELEM_H
+int Naunet::SetReferenceAbund(realtype *ref, int opt) {
+    if (opt == 0) {
+        for (int i = 0; i < NELEMENTS; i++) {
+            ab_ref_[i] = ref[i] / ref[IDX_ELEM_H];
+        }
+    } else if (opt == 1) {
+        double Hnuclei = GetHNuclei(ref);
+        for (int i = 0; i < NELEMENTS; i++) {
+            ab_ref_[i] = GetElementAbund(ref, i) / Hnuclei;
+        }
+    }
+
+    return NAUNET_SUCCESS;
+}
+#endif
+
+int Naunet::Solve(realtype *ab, realtype dt, NaunetData *data) {
+    int cvflag;
+    realtype t0 = 0.0;
+
+    /* */
+
+    for (int i = 0; i < NEQUATIONS; i++) {
+        ab_init_[i] = ab[i];
+        ab_tmp_[i]  = ab[i];
+    }
 
     // realtype *ydata = N_VGetArrayPointer(cv_y_);
     // for (int i=0; i<NEQUATIONS; i++)
@@ -121,26 +393,85 @@ int Naunet::Solve(realtype *ab, realtype dt, NaunetData *data) {
     // }
     N_VSetArrayPointer(ab, cv_y_);
 
-    /*  */
+    cv_mem_ = CVodeCreate(CV_BDF);
 
-#ifdef NAUNET_DEBUG
-    /*  */
-#endif
+    cvflag  = CVodeSetErrFile(cv_mem_, errfp_);
+    if (CheckFlag(&cvflag, "CVodeSetErrFile", 1, errfp_) == NAUNET_FAIL) {
+        return NAUNET_FAIL;
+    }
 
-    flag = CVodeReInit(cv_mem_, 0.0, cv_y_);
-    if (check_flag(&flag, "CVodeReInit", 1)) return 1;
-    flag = CVodeSetUserData(cv_mem_, data);
-    if (check_flag(&flag, "CVodeSetUserData", 1)) return 1;
+    cvflag = CVodeSetMaxNumSteps(cv_mem_, mxsteps_);
+    if (CheckFlag(&cvflag, "CVodeSetMaxNumSteps", 1, errfp_) == NAUNET_FAIL) {
+        return NAUNET_FAIL;
+    }
 
-    flag = CVode(cv_mem_, dt, cv_y_, &t0, CV_NORMAL);
+    cvflag = CVodeInit(cv_mem_, Fex, t0, cv_y_);
+    if (CheckFlag(&cvflag, "CVodeInit", 1, errfp_) == NAUNET_FAIL) {
+        return NAUNET_FAIL;
+    }
+
+    cvflag = CVodeSStolerances(cv_mem_, rtol_, atol_);
+    if (CheckFlag(&cvflag, "CVodeSStolerances", 1, errfp_) == NAUNET_FAIL) {
+        return NAUNET_FAIL;
+    }
+
+    cvflag = CVodeSetLinearSolver(cv_mem_, cv_ls_, cv_a_);
+    if (CheckFlag(&cvflag, "CVodeSetLinearSolver", 1, errfp_) == NAUNET_FAIL) {
+        return NAUNET_FAIL;
+    }
+
+    cvflag = CVodeSetJacFn(cv_mem_, Jac);
+    if (CheckFlag(&cvflag, "CVodeSetJacFn", 1, errfp_) == NAUNET_FAIL) {
+        return NAUNET_FAIL;
+    }
+
+    cvflag = CVodeSetUserData(cv_mem_, data);
+    if (CheckFlag(&cvflag, "CVodeSetUserData", 1, errfp_) == NAUNET_FAIL) {
+        return NAUNET_FAIL;
+    }
+
+    cvflag   = CVode(cv_mem_, dt, cv_y_, &t0, CV_NORMAL);
+
+    // ab   = N_VGetArrayPointer(cv_y_);
+
+    int flag = HandleError(cvflag, ab, dt, t0);
+
+    if (flag == NAUNET_FAIL) {
+        fprintf(errfp_, "Some unrecoverable error occurred. cvFlag = %d\n",
+                cvflag);
+        fprintf(errfp_, "Initial condition: \n");
+
+        /* */
+        fprintf(errfp_, "    data.nH = %13.7e;\n", data->nH);
+        /* */
+        fprintf(errfp_, "    data.Tgas = %13.7e;\n", data->Tgas);
+        /* */
+        fprintf(errfp_, "    data.mu = %13.7e;\n", data->mu);
+        /* */
+        fprintf(errfp_, "    data.gamma = %13.7e;\n", data->gamma);
+        /*  */
+
+        fprintf(errfp_, "\n");
+
+        realtype spy = 365.0 * 86400.0;
+
+        fprintf(errfp_, "    dtyr = %13.7e;\n", dt / spy);
+        fprintf(errfp_, "\n");
+
+        for (int i = 0; i < NEQUATIONS; i++) {
+            fprintf(errfp_, "    y[%d] = %13.7e;\n", i, ab_init_[i]);
+        }
+
+        for (int i = 0; i < NEQUATIONS; i++) {
+            fprintf(errfp_, "    y_final[%d] = %13.7e;\n", i, ab[i]);
+        }
+    }
+
+    CVodeFree(&cv_mem_);
+
+    return flag;
 
     /* */
-
-    ab   = N_VGetArrayPointer(cv_y_);
-
-    /* */
-
-    return NAUNET_SUCCESS;
 };
 
 #ifdef PYMODULE
