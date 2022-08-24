@@ -93,6 +93,9 @@ PYBIND11_MODULE(PYMODNAME, m) {
         .def(py::init())
         .def_readwrite("nH", &NaunetData::nH)
         .def_readwrite("Tgas", &NaunetData::Tgas)
+        .def_readwrite("zeta", &NaunetData::zeta)
+        .def_readwrite("Av", &NaunetData::Av)
+        .def_readwrite("omega", &NaunetData::omega)
         .def_readwrite("mu", &NaunetData::mu)
         .def_readwrite("gamma", &NaunetData::gamma)
         ;

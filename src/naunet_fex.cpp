@@ -26,6 +26,9 @@ int Fex(realtype t, N_Vector u, N_Vector udot, void *user_data) {
     // clang-format off
     realtype nH = u_data->nH;
     realtype Tgas = u_data->Tgas;
+    realtype zeta = u_data->zeta;
+    realtype Av = u_data->Av;
+    realtype omega = u_data->omega;
     realtype mu = u_data->mu;
     realtype gamma = u_data->gamma;
     
@@ -51,13 +54,34 @@ int Fex(realtype t, N_Vector u, N_Vector udot, void *user_data) {
 #endif
 
     // clang-format off
+    ydot[IDX_HeI] = 0.0 - k[3]*y[IDX_HeI]*y[IDX_eM] +
+        k[4]*y[IDX_HeII]*y[IDX_eM] + k[5]*y[IDX_HeII]*y[IDX_eM];
+    ydot[IDX_HeIII] = 0.0 + k[6]*y[IDX_HeII]*y[IDX_eM] -
+        k[7]*y[IDX_HeIII]*y[IDX_eM];
+    ydot[IDX_HeII] = 0.0 + k[3]*y[IDX_HeI]*y[IDX_eM] -
+        k[4]*y[IDX_HeII]*y[IDX_eM] - k[5]*y[IDX_HeII]*y[IDX_eM] -
+        k[6]*y[IDX_HeII]*y[IDX_eM] + k[7]*y[IDX_HeIII]*y[IDX_eM];
+    ydot[IDX_H2II] = 0.0 + k[11]*y[IDX_HI]*y[IDX_HII] +
+        k[12]*y[IDX_HI]*y[IDX_HII] - k[13]*y[IDX_H2II]*y[IDX_HI] +
+        k[14]*y[IDX_H2I]*y[IDX_HII] + k[21]*y[IDX_HM]*y[IDX_HII] -
+        k[22]*y[IDX_H2II]*y[IDX_eM] - k[23]*y[IDX_H2II]*y[IDX_eM] -
+        k[24]*y[IDX_H2II]*y[IDX_HM];
+    ydot[IDX_DII] = 0.0 + k[29]*y[IDX_HII]*y[IDX_DI] -
+        k[30]*y[IDX_HI]*y[IDX_DII] - k[31]*y[IDX_H2I]*y[IDX_DII] +
+        k[32]*y[IDX_HDI]*y[IDX_HII] - k[37]*y[IDX_DII]*y[IDX_eM];
     ydot[IDX_DI] = 0.0 - k[29]*y[IDX_HII]*y[IDX_DI] +
         k[30]*y[IDX_HI]*y[IDX_DII] - k[33]*y[IDX_H2I]*y[IDX_DI] -
         k[34]*y[IDX_H2I]*y[IDX_DI] + k[35]*y[IDX_HDI]*y[IDX_HI] -
         k[36]*y[IDX_DI]*y[IDX_HM] + k[37]*y[IDX_DII]*y[IDX_eM];
-    ydot[IDX_DII] = 0.0 + k[29]*y[IDX_HII]*y[IDX_DI] -
-        k[30]*y[IDX_HI]*y[IDX_DII] - k[31]*y[IDX_H2I]*y[IDX_DII] +
-        k[32]*y[IDX_HDI]*y[IDX_HII] - k[37]*y[IDX_DII]*y[IDX_eM];
+    ydot[IDX_HM] = 0.0 + k[8]*y[IDX_HI]*y[IDX_eM] - k[9]*y[IDX_HM]*y[IDX_HI]
+        - k[10]*y[IDX_HM]*y[IDX_HI] - k[17]*y[IDX_HM]*y[IDX_eM] -
+        k[18]*y[IDX_HM]*y[IDX_HI] - k[19]*y[IDX_HM]*y[IDX_HI] -
+        k[20]*y[IDX_HM]*y[IDX_HII] - k[21]*y[IDX_HM]*y[IDX_HII] -
+        k[24]*y[IDX_H2II]*y[IDX_HM] - k[36]*y[IDX_DI]*y[IDX_HM];
+    ydot[IDX_HDI] = 0.0 + k[31]*y[IDX_H2I]*y[IDX_DII] -
+        k[32]*y[IDX_HDI]*y[IDX_HII] + k[33]*y[IDX_H2I]*y[IDX_DI] +
+        k[34]*y[IDX_H2I]*y[IDX_DI] - k[35]*y[IDX_HDI]*y[IDX_HI] +
+        k[36]*y[IDX_DI]*y[IDX_HM];
     ydot[IDX_HI] = 0.0 - k[0]*y[IDX_HI]*y[IDX_eM] +
         k[1]*y[IDX_HII]*y[IDX_eM] + k[2]*y[IDX_HII]*y[IDX_eM] -
         k[8]*y[IDX_HI]*y[IDX_eM] - k[9]*y[IDX_HM]*y[IDX_HI] -
@@ -94,11 +118,6 @@ int Fex(realtype t, N_Vector u, N_Vector udot, void *user_data) {
         k[20]*y[IDX_HM]*y[IDX_HII] - k[21]*y[IDX_HM]*y[IDX_HII] -
         k[29]*y[IDX_HII]*y[IDX_DI] + k[30]*y[IDX_HI]*y[IDX_DII] +
         k[31]*y[IDX_H2I]*y[IDX_DII] - k[32]*y[IDX_HDI]*y[IDX_HII];
-    ydot[IDX_HM] = 0.0 + k[8]*y[IDX_HI]*y[IDX_eM] - k[9]*y[IDX_HM]*y[IDX_HI]
-        - k[10]*y[IDX_HM]*y[IDX_HI] - k[17]*y[IDX_HM]*y[IDX_eM] -
-        k[18]*y[IDX_HM]*y[IDX_HI] - k[19]*y[IDX_HM]*y[IDX_HI] -
-        k[20]*y[IDX_HM]*y[IDX_HII] - k[21]*y[IDX_HM]*y[IDX_HII] -
-        k[24]*y[IDX_H2II]*y[IDX_HM] - k[36]*y[IDX_DI]*y[IDX_HM];
     ydot[IDX_H2I] = 0.0 + k[9]*y[IDX_HM]*y[IDX_HI] +
         k[10]*y[IDX_HM]*y[IDX_HI] + k[13]*y[IDX_H2II]*y[IDX_HI] -
         k[14]*y[IDX_H2I]*y[IDX_HII] - k[15]*y[IDX_H2I]*y[IDX_eM] -
@@ -113,22 +132,6 @@ int Fex(realtype t, N_Vector u, N_Vector udot, void *user_data) {
         k[28]*y[IDX_H2I]*y[IDX_HI]*y[IDX_HI] - k[31]*y[IDX_H2I]*y[IDX_DII] +
         k[32]*y[IDX_HDI]*y[IDX_HII] - k[33]*y[IDX_H2I]*y[IDX_DI] -
         k[34]*y[IDX_H2I]*y[IDX_DI] + k[35]*y[IDX_HDI]*y[IDX_HI];
-    ydot[IDX_H2II] = 0.0 + k[11]*y[IDX_HI]*y[IDX_HII] +
-        k[12]*y[IDX_HI]*y[IDX_HII] - k[13]*y[IDX_H2II]*y[IDX_HI] +
-        k[14]*y[IDX_H2I]*y[IDX_HII] + k[21]*y[IDX_HM]*y[IDX_HII] -
-        k[22]*y[IDX_H2II]*y[IDX_eM] - k[23]*y[IDX_H2II]*y[IDX_eM] -
-        k[24]*y[IDX_H2II]*y[IDX_HM];
-    ydot[IDX_HDI] = 0.0 + k[31]*y[IDX_H2I]*y[IDX_DII] -
-        k[32]*y[IDX_HDI]*y[IDX_HII] + k[33]*y[IDX_H2I]*y[IDX_DI] +
-        k[34]*y[IDX_H2I]*y[IDX_DI] - k[35]*y[IDX_HDI]*y[IDX_HI] +
-        k[36]*y[IDX_DI]*y[IDX_HM];
-    ydot[IDX_HeI] = 0.0 - k[3]*y[IDX_HeI]*y[IDX_eM] +
-        k[4]*y[IDX_HeII]*y[IDX_eM] + k[5]*y[IDX_HeII]*y[IDX_eM];
-    ydot[IDX_HeII] = 0.0 + k[3]*y[IDX_HeI]*y[IDX_eM] -
-        k[4]*y[IDX_HeII]*y[IDX_eM] - k[5]*y[IDX_HeII]*y[IDX_eM] -
-        k[6]*y[IDX_HeII]*y[IDX_eM] + k[7]*y[IDX_HeIII]*y[IDX_eM];
-    ydot[IDX_HeIII] = 0.0 + k[6]*y[IDX_HeII]*y[IDX_eM] -
-        k[7]*y[IDX_HeIII]*y[IDX_eM];
     ydot[IDX_eM] = 0.0 - k[0]*y[IDX_HI]*y[IDX_eM] + k[0]*y[IDX_HI]*y[IDX_eM]
         + k[0]*y[IDX_HI]*y[IDX_eM] - k[1]*y[IDX_HII]*y[IDX_eM] -
         k[2]*y[IDX_HII]*y[IDX_eM] - k[3]*y[IDX_HeI]*y[IDX_eM] +

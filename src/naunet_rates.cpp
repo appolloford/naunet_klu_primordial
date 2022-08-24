@@ -15,6 +15,9 @@ int EvalRates(realtype *k, realtype *y, NaunetData *u_data) {
 
     realtype nH = u_data->nH;
     realtype Tgas = u_data->Tgas;
+    realtype zeta = u_data->zeta;
+    realtype Av = u_data->Av;
+    realtype omega = u_data->omega;
     realtype mu = u_data->mu;
     realtype gamma = u_data->gamma;
     
@@ -166,6 +169,9 @@ int EvalHeatingRates(realtype *kh, realtype *y, NaunetData *u_data) {
 
     realtype nH = u_data->nH;
     realtype Tgas = u_data->Tgas;
+    realtype zeta = u_data->zeta;
+    realtype Av = u_data->Av;
+    realtype omega = u_data->omega;
     realtype mu = u_data->mu;
     realtype gamma = u_data->gamma;
     
@@ -193,6 +199,9 @@ int EvalCoolingRates(realtype *kc, realtype *y, NaunetData *u_data) {
 
     realtype nH = u_data->nH;
     realtype Tgas = u_data->Tgas;
+    realtype zeta = u_data->zeta;
+    realtype Av = u_data->Av;
+    realtype omega = u_data->omega;
     realtype mu = u_data->mu;
     realtype gamma = u_data->gamma;
     

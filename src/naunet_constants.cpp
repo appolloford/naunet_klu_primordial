@@ -28,7 +28,8 @@ const double echarge         = 4.80320425e-10;
 // Boltzmann constant (erg/K)
 const double kerg            = 1.380658e-16;
 
-
+// reduced Planck constant
+const double hbar            = 1.054571726e-27;
 
 
 

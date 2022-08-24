@@ -11,21 +11,21 @@
 
 // clang-format off
 double GetElementAbund(double *y, int elemidx) {
+    if (elemidx == IDX_ELEM_He) {
+        return 1.0*y[IDX_HeI] + 1.0*y[IDX_HeIII] + 1.0*y[IDX_HeII] + 0.0;
+    }
     if (elemidx == IDX_ELEM_D) {
-        return 0.0 + 1.0 * y[IDX_DI] + 1.0 * y[IDX_DII] + 1.0 * y[IDX_HDI];
+        return 1.0*y[IDX_DII] + 1.0*y[IDX_DI] + 1.0*y[IDX_HDI] + 0.0;
     }
     if (elemidx == IDX_ELEM_H) {
-        return 0.0 + 1.0 * y[IDX_HI] + 1.0 * y[IDX_HII] + 1.0 * y[IDX_HM] + 2.0 *
-            y[IDX_H2I] + 2.0 * y[IDX_H2II] + 1.0 * y[IDX_HDI];
-    }
-    if (elemidx == IDX_ELEM_He) {
-        return 0.0 + 1.0 * y[IDX_HeI] + 1.0 * y[IDX_HeII] + 1.0 * y[IDX_HeIII];
+        return 2.0*y[IDX_H2II] + 1.0*y[IDX_HM] + 1.0*y[IDX_HDI] + 1.0*y[IDX_HI] + 
+               1.0*y[IDX_HII] + 2.0*y[IDX_H2I] + 0.0;
     }
     
 }
 
 double GetMantleDens(double *y) {
-    return 0.0;
+    return  + 0.0;
 }
 
 double GetHNuclei(double *y) {
@@ -37,15 +37,19 @@ double GetHNuclei(double *y) {
 }
 
 double GetMu(double *y) {
-    return (y[IDX_DI]*2.0 + y[IDX_DII]*2.0 + y[IDX_HI]*1.0 + y[IDX_HII]*1.0 +
-        y[IDX_HM]*1.0 + y[IDX_H2I]*2.0 + y[IDX_H2II]*2.0 + y[IDX_HDI]*3.0 +
-        y[IDX_HeI]*4.0 + y[IDX_HeII]*4.0 + y[IDX_HeIII]*4.0 + y[IDX_eM]*0.0) /
-        (y[IDX_DI] + y[IDX_DII] + y[IDX_HI] + y[IDX_HII] + y[IDX_HM] +
-        y[IDX_H2I] + y[IDX_H2II] + y[IDX_HDI] + y[IDX_HeI] + y[IDX_HeII] +
-        y[IDX_HeIII] + y[IDX_eM]);
+    // TODO: exclude electron, grain?
+    double mass = 4.0*y[IDX_HeI] + 4.0*y[IDX_HeIII] + 4.0*y[IDX_HeII] + 2.0*y[IDX_H2II] + 
+                  2.0*y[IDX_DII] + 2.0*y[IDX_DI] + 1.0*y[IDX_HM] + 3.0*y[IDX_HDI] + 
+                  1.0*y[IDX_HI] + 1.0*y[IDX_HII] + 2.0*y[IDX_H2I] + 0.0*y[IDX_eM] + 0.0;
+    double num = y[IDX_HeI] + y[IDX_HeIII] + y[IDX_HeII] + y[IDX_H2II] +
+                 y[IDX_DII] + y[IDX_DI] + y[IDX_HM] + y[IDX_HDI] + y[IDX_HI] +
+                 y[IDX_HII] + y[IDX_H2I] + y[IDX_eM] + 0.0;
+
+    return mass / num;
 }
 
 double GetGamma(double *y) {
+    // TODO: different ways to get adiabatic index
     return 5.0 / 3.0;
 }
 

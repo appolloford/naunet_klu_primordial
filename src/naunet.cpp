@@ -8,9 +8,8 @@
 #include "naunet.h"
 #include "naunet_ode.h"
 #include "naunet_physics.h"
+#include "naunet_renorm.h"
 /* */
-
-#define IJth(A, i, j) SM_ELEMENT_D(A, i, j)
 
 Naunet::Naunet(){};
 
@@ -265,32 +264,13 @@ int Naunet::PrintDebugInfo() {
 
 #ifdef IDX_ELEM_H
 int Naunet::Renorm(realtype *ab) {
-    N_Vector b     = N_VMake_Serial(NELEMENTS, ab_ref_);
-    N_Vector r     = N_VNew_Serial(NELEMENTS);
-    SUNMatrix A    = SUNDenseMatrix(NELEMENTS, NELEMENTS);
-    double Hnuclei = GetHNuclei(ab);
+    N_Vector b  = N_VMake_Serial(NELEMENTS, ab_ref_);
+    N_Vector r  = N_VNew_Serial(NELEMENTS);
+    SUNMatrix A = SUNDenseMatrix(NELEMENTS, NELEMENTS);
 
     N_VConst(0.0, r);
-    // clang-format off
-    IJth(A, IDX_ELEM_D, IDX_ELEM_D) = 0.0 + 2.0 * ab[IDX_DI] / 2.0 / Hnuclei
-        + 2.0 * ab[IDX_DII] / 2.0 / Hnuclei + 2.0 * ab[IDX_HDI] / 3.0 / Hnuclei;
-    IJth(A, IDX_ELEM_D, IDX_ELEM_H) = 0.0 + 1.0 * ab[IDX_HDI] / 3.0 /
-        Hnuclei;
-    IJth(A, IDX_ELEM_D, IDX_ELEM_He) = 0.0;
-    IJth(A, IDX_ELEM_H, IDX_ELEM_D) = 0.0 + 2.0 * ab[IDX_HDI] / 3.0 /
-        Hnuclei;
-    IJth(A, IDX_ELEM_H, IDX_ELEM_H) = 0.0 + 1.0 * ab[IDX_HI] / 1.0 / Hnuclei
-        + 1.0 * ab[IDX_HII] / 1.0 / Hnuclei + 1.0 * ab[IDX_HM] / 1.0 / Hnuclei +
-        4.0 * ab[IDX_H2I] / 2.0 / Hnuclei + 4.0 * ab[IDX_H2II] / 2.0 / Hnuclei +
-        1.0 * ab[IDX_HDI] / 3.0 / Hnuclei;
-    IJth(A, IDX_ELEM_H, IDX_ELEM_He) = 0.0;
-    IJth(A, IDX_ELEM_He, IDX_ELEM_D) = 0.0;
-    IJth(A, IDX_ELEM_He, IDX_ELEM_H) = 0.0;
-    IJth(A, IDX_ELEM_He, IDX_ELEM_He) = 0.0 + 4.0 * ab[IDX_HeI] / 4.0 /
-        Hnuclei + 4.0 * ab[IDX_HeII] / 4.0 / Hnuclei + 4.0 * ab[IDX_HeIII] / 4.0
-        / Hnuclei;
-    
-    // clang-format on
+
+    InitRenorm(ab, A);
 
     SUNLinearSolver LS = SUNLinSol_Dense(r, A);
 
@@ -306,21 +286,7 @@ int Naunet::Renorm(realtype *ab) {
 
     realtype *rptr = N_VGetArrayPointer(r);
 
-    // clang-format off
-    ab[IDX_DI] = (0.0 + 2.0 * rptr[IDX_ELEM_D] / 2.0) * ab[IDX_DI];
-    ab[IDX_DII] = (0.0 + 2.0 * rptr[IDX_ELEM_D] / 2.0) * ab[IDX_DII];
-    ab[IDX_HI] = (0.0 + 1.0 * rptr[IDX_ELEM_H] / 1.0) * ab[IDX_HI];
-    ab[IDX_HII] = (0.0 + 1.0 * rptr[IDX_ELEM_H] / 1.0) * ab[IDX_HII];
-    ab[IDX_HM] = (0.0 + 1.0 * rptr[IDX_ELEM_H] / 1.0) * ab[IDX_HM];
-    ab[IDX_H2I] = (0.0 + 2.0 * rptr[IDX_ELEM_H] / 2.0) * ab[IDX_H2I];
-    ab[IDX_H2II] = (0.0 + 2.0 * rptr[IDX_ELEM_H] / 2.0) * ab[IDX_H2II];
-    ab[IDX_HDI] = (0.0 + 2.0 * rptr[IDX_ELEM_D] / 3.0 + 1.0 * rptr[IDX_ELEM_H] / 3.0) * ab[IDX_HDI];
-    ab[IDX_HeI] = (0.0 + 4.0 * rptr[IDX_ELEM_He] / 4.0) * ab[IDX_HeI];
-    ab[IDX_HeII] = (0.0 + 4.0 * rptr[IDX_ELEM_He] / 4.0) * ab[IDX_HeII];
-    ab[IDX_HeIII] = (0.0 + 4.0 * rptr[IDX_ELEM_He] / 4.0) * ab[IDX_HeIII];
-    ab[IDX_eM] = (1.0) * ab[IDX_eM];
-    
-    // clang-format on
+    RenormAbundance(rptr, ab);
 
     N_VDestroy(b);
     N_VDestroy(r);
@@ -376,10 +342,10 @@ int Naunet::SetReferenceAbund(realtype *ref, int opt) {
 #endif
 
 int Naunet::Solve(realtype *ab, realtype dt, NaunetData *data) {
+    /* */
+
     int cvflag;
     realtype t0 = 0.0;
-
-    /* */
 
     for (int i = 0; i < NEQUATIONS; i++) {
         ab_init_[i] = ab[i];
@@ -445,6 +411,12 @@ int Naunet::Solve(realtype *ab, realtype dt, NaunetData *data) {
         fprintf(errfp_, "    data.nH = %13.7e;\n", data->nH);
         /* */
         fprintf(errfp_, "    data.Tgas = %13.7e;\n", data->Tgas);
+        /* */
+        fprintf(errfp_, "    data.zeta = %13.7e;\n", data->zeta);
+        /* */
+        fprintf(errfp_, "    data.Av = %13.7e;\n", data->Av);
+        /* */
+        fprintf(errfp_, "    data.omega = %13.7e;\n", data->omega);
         /* */
         fprintf(errfp_, "    data.mu = %13.7e;\n", data->mu);
         /* */

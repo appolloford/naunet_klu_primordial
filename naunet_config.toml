@@ -17,8 +17,7 @@ cooling = ["CIC_HI", "CIC_HeI", "CIC_HeII", "CIC_He_2S", "RC_HII", "RC_HeI", "RC
 ode_modifier = []
 
 [chemistry.dust]
-model = "none"
-species = []
+model = ""
 
 [chemistry.binding_energy]
 
@@ -39,9 +38,9 @@ num_of_gas_species = 12
 num_of_ice_species = 0
 num_of_dust_species = 0
 num_of_reactions = 38
-list_of_species = ["D", "D+", "H", "H+", "H-", "H2", "H2+", "HD", "He", "He+", "He++", "e-"]
-list_of_species_alias = ["DI", "DII", "HI", "HII", "HM", "H2I", "H2II", "HDI", "HeI", "HeII", "HeIII", "eM"]
-list_of_gas_species = ["D", "D+", "H", "H+", "H-", "H2", "H2+", "HD", "He", "He+", "He++", "e-"]
+list_of_species = ["He", "He++", "He+", "H2+", "D+", "D", "H-", "HD", "H", "H+", "H2", "e-"]
+list_of_species_alias = ["HeI", "HeIII", "HeII", "H2II", "DII", "DI", "HM", "HDI", "HI", "HII", "H2I", "eM"]
+list_of_gas_species = ["He", "He++", "He+", "H2+", "D+", "D", "H-", "HD", "H", "H+", "H2", "e-"]
 list_of_ice_species = []
 list_of_dust_species = []
 
