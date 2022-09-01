@@ -32,6 +32,10 @@ int Fex(realtype t, N_Vector u, N_Vector udot, void *user_data) {
     realtype mu = u_data->mu;
     realtype gamma = u_data->gamma;
     
+    double Temp = y[IDX_TGAS];
+    double T3 = Temp/1e3;
+    double T5 = Temp/1e5;
+    double T6 = Temp/1e6;
     
 #if (NHEATPROCS || NCOOLPROCS)
     if (mu < 0) mu = GetMu(y);
@@ -151,7 +155,7 @@ int Fex(realtype t, N_Vector u, N_Vector udot, void *user_data) {
         kc[1] * y[IDX_HeI]*y[IDX_eM] - kc[2] * y[IDX_HeII]*y[IDX_eM] - kc[3] *
         y[IDX_HeII]*y[IDX_eM]*y[IDX_eM] - kc[4] * y[IDX_HII]*y[IDX_eM] - kc[5] *
         y[IDX_HeII]*y[IDX_eM] - kc[6] * y[IDX_HeII]*y[IDX_eM] - kc[7] *
-        y[IDX_HeIII]*y[IDX_eM] - kc[8] * y[IDX_HI]*y[IDX_eM]*y[IDX_eM] - kc[9] *
+        y[IDX_HeIII]*y[IDX_eM] - kc[8] * y[IDX_HI]*y[IDX_eM] - kc[9] *
         y[IDX_HeII]*y[IDX_eM] - kc[10] * y[IDX_HeII]*y[IDX_eM] ) / kerg /
         GetNumDens(y);
     

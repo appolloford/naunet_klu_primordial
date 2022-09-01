@@ -320,15 +320,14 @@ int Jac(realtype t, N_Vector u, N_Vector fu, SUNMatrix jmatrix, void *user_data,
     data[84] = (gamma - 1.0) * (0.0 - kc[2]*y[IDX_eM] - kc[3]*y[IDX_eM]*y[IDX_eM] -
         kc[5]*y[IDX_eM] - kc[6]*y[IDX_eM] - kc[9]*y[IDX_eM] - kc[10]*y[IDX_eM] )
         / kerg / GetNumDens(y);
-    data[85] = (gamma - 1.0) * (0.0 - kc[0]*y[IDX_eM] - kc[8]*y[IDX_eM]*y[IDX_eM] ) /
-        kerg / GetNumDens(y);
+    data[85] = (gamma - 1.0) * (0.0 - kc[0]*y[IDX_eM] - kc[8]*y[IDX_eM] ) / kerg /
+        GetNumDens(y);
     data[86] = (gamma - 1.0) * (0.0 - kc[4]*y[IDX_eM] ) / kerg / GetNumDens(y);
     data[87] = (gamma - 1.0) * (0.0 - kc[0]*y[IDX_HI] - kc[1]*y[IDX_HeI] -
         kc[2]*y[IDX_HeII] - kc[3]*y[IDX_HeII]*y[IDX_eM] -
         kc[3]*y[IDX_HeII]*y[IDX_eM] - kc[4]*y[IDX_HII] - kc[5]*y[IDX_HeII] -
-        kc[6]*y[IDX_HeII] - kc[7]*y[IDX_HeIII] - kc[8]*y[IDX_HI]*y[IDX_eM] -
-        kc[8]*y[IDX_HI]*y[IDX_eM] - kc[9]*y[IDX_HeII] - kc[10]*y[IDX_HeII] ) /
-        kerg / GetNumDens(y);
+        kc[6]*y[IDX_HeII] - kc[7]*y[IDX_HeIII] - kc[8]*y[IDX_HI] -
+        kc[9]*y[IDX_HeII] - kc[10]*y[IDX_HeII] ) / kerg / GetNumDens(y);
     
     // clang-format on
 
