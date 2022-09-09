@@ -407,21 +407,18 @@ int Naunet::Solve(realtype *ab, realtype dt, NaunetData *data) {
                 cvflag);
         fprintf(errfp_, "Initial condition: \n");
 
+        // clang-format off
+        /* */
         /* */
         fprintf(errfp_, "    data.nH = %13.7e;\n", data->nH);
         /* */
         fprintf(errfp_, "    data.Tgas = %13.7e;\n", data->Tgas);
         /* */
-        fprintf(errfp_, "    data.zeta = %13.7e;\n", data->zeta);
-        /* */
-        fprintf(errfp_, "    data.Av = %13.7e;\n", data->Av);
-        /* */
-        fprintf(errfp_, "    data.omega = %13.7e;\n", data->omega);
-        /* */
         fprintf(errfp_, "    data.mu = %13.7e;\n", data->mu);
         /* */
         fprintf(errfp_, "    data.gamma = %13.7e;\n", data->gamma);
         /*  */
+        // clang-format on
 
         fprintf(errfp_, "\n");
 

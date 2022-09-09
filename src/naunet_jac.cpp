@@ -31,11 +31,14 @@ int Jac(realtype t, N_Vector u, N_Vector fu, SUNMatrix jmatrix, void *user_data,
     // clang-format off
     realtype nH = u_data->nH;
     realtype Tgas = u_data->Tgas;
-    realtype zeta = u_data->zeta;
-    realtype Av = u_data->Av;
-    realtype omega = u_data->omega;
     realtype mu = u_data->mu;
     realtype gamma = u_data->gamma;
+    
+    realtype Temp = y[IDX_TGAS];
+    realtype Temp3 = Temp/1e3;
+    realtype Temp5 = Temp/1e5;
+    realtype Temp6 = Temp/1e6;
+    realtype npar = GetNumDens(y);
         
 #if (NHEATPROCS || NCOOLPROCS)
     if (mu < 0) mu = GetMu(y);
@@ -315,19 +318,19 @@ int Jac(realtype t, N_Vector u, N_Vector fu, SUNMatrix jmatrix, void *user_data,
         - k[15]*y[IDX_H2I] + k[15]*y[IDX_H2I] - k[17]*y[IDX_HM] +
         k[17]*y[IDX_HM] + k[17]*y[IDX_HM] - k[22]*y[IDX_H2II] -
         k[23]*y[IDX_H2II] - k[37]*y[IDX_DII];
-    data[82] = (gamma - 1.0) * (0.0 - kc[1]*y[IDX_eM] ) / kerg / GetNumDens(y);
-    data[83] = (gamma - 1.0) * (0.0 - kc[7]*y[IDX_eM] ) / kerg / GetNumDens(y);
-    data[84] = (gamma - 1.0) * (0.0 - kc[2]*y[IDX_eM] - kc[3]*y[IDX_eM]*y[IDX_eM] -
+    data[82] = (gamma - 1.0) * ( 0.0 - kc[1]*y[IDX_eM] ) / kerg / npar;
+    data[83] = (gamma - 1.0) * ( 0.0 - kc[7]*y[IDX_eM] ) / kerg / npar;
+    data[84] = (gamma - 1.0) * ( 0.0 - kc[2]*y[IDX_eM] - kc[3]*y[IDX_eM]*y[IDX_eM] -
         kc[5]*y[IDX_eM] - kc[6]*y[IDX_eM] - kc[9]*y[IDX_eM] - kc[10]*y[IDX_eM] )
-        / kerg / GetNumDens(y);
-    data[85] = (gamma - 1.0) * (0.0 - kc[0]*y[IDX_eM] - kc[8]*y[IDX_eM] ) / kerg /
-        GetNumDens(y);
-    data[86] = (gamma - 1.0) * (0.0 - kc[4]*y[IDX_eM] ) / kerg / GetNumDens(y);
-    data[87] = (gamma - 1.0) * (0.0 - kc[0]*y[IDX_HI] - kc[1]*y[IDX_HeI] -
+        / kerg / npar;
+    data[85] = (gamma - 1.0) * ( 0.0 - kc[0]*y[IDX_eM] - kc[8]*y[IDX_eM] ) / kerg /
+        npar;
+    data[86] = (gamma - 1.0) * ( 0.0 - kc[4]*y[IDX_eM] ) / kerg / npar;
+    data[87] = (gamma - 1.0) * ( 0.0 - kc[0]*y[IDX_HI] - kc[1]*y[IDX_HeI] -
         kc[2]*y[IDX_HeII] - kc[3]*y[IDX_HeII]*y[IDX_eM] -
         kc[3]*y[IDX_HeII]*y[IDX_eM] - kc[4]*y[IDX_HII] - kc[5]*y[IDX_HeII] -
         kc[6]*y[IDX_HeII] - kc[7]*y[IDX_HeIII] - kc[8]*y[IDX_HI] -
-        kc[9]*y[IDX_HeII] - kc[10]*y[IDX_HeII] ) / kerg / GetNumDens(y);
+        kc[9]*y[IDX_HeII] - kc[10]*y[IDX_HeII] ) / kerg / npar;
     
     // clang-format on
 

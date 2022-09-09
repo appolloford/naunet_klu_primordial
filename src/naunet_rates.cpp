@@ -15,26 +15,15 @@ int EvalRates(realtype *k, realtype *y, NaunetData *u_data) {
 
     realtype nH = u_data->nH;
     realtype Tgas = u_data->Tgas;
-    realtype zeta = u_data->zeta;
-    realtype Av = u_data->Av;
-    realtype omega = u_data->omega;
-    realtype mu = u_data->mu;
-    realtype gamma = u_data->gamma;
     
-    double Temp = y[IDX_TGAS];
-    double T3 = Temp/1e3;
-    double T5 = Temp/1e5;
-    double T6 = Temp/1e6;
+    realtype Te = Tgas * 8.617343e-5;
+    realtype lnTe = log(Te);
+    realtype T32 = Tgas / 300.0;
+    realtype invT = 1.0 / Tgas;
+    realtype invTe = 1.0 / Te;
+    realtype sqrTgas = sqrt(Tgas);
     
     // clang-format on
-
-    // Some variable definitions from krome
-    realtype Te      = Tgas * 8.617343e-5;            // Tgas in eV (eV)
-    realtype lnTe    = log(Te);                       // ln of Te (#)
-    realtype T32     = Tgas * 0.0033333333333333335;  // Tgas/(300 K) (#)
-    realtype invT    = 1.0 / Tgas;                    // inverse of T (1/K)
-    realtype invTe   = 1.0 / Te;                      // inverse of T (1/eV)
-    realtype sqrTgas = sqrt(Tgas);  // Tgas rootsquare (K**0.5)
 
     // reaaction rate (k) of each reaction
     // clang-format off
@@ -171,28 +160,9 @@ int EvalRates(realtype *k, realtype *y, NaunetData *u_data) {
 // clang-format off
 int EvalHeatingRates(realtype *kh, realtype *y, NaunetData *u_data) {
 
-    realtype nH = u_data->nH;
-    realtype Tgas = u_data->Tgas;
-    realtype zeta = u_data->zeta;
-    realtype Av = u_data->Av;
-    realtype omega = u_data->omega;
-    realtype mu = u_data->mu;
-    realtype gamma = u_data->gamma;
     
-    double Temp = y[IDX_TGAS];
-    double T3 = Temp/1e3;
-    double T5 = Temp/1e5;
-    double T6 = Temp/1e6;
     
     // clang-format on
-
-    // Some variable definitions from krome
-    realtype Te      = Tgas * 8.617343e-5;            // Tgas in eV (eV)
-    realtype lnTe    = log(Te);                       // ln of Te (#)
-    realtype T32     = Tgas * 0.0033333333333333335;  // Tgas/(300 K) (#)
-    realtype invT    = 1.0 / Tgas;                    // inverse of T (1/K)
-    realtype invTe   = 1.0 / Te;                      // inverse of T (1/eV)
-    realtype sqrTgas = sqrt(Tgas);  // Tgas rootsquare (K**0.5)
 
     // reaaction rate (k) of each reaction
     // clang-format off
@@ -205,57 +175,47 @@ int EvalHeatingRates(realtype *kh, realtype *y, NaunetData *u_data) {
 // clang-format off
 int EvalCoolingRates(realtype *kc, realtype *y, NaunetData *u_data) {
 
-    realtype nH = u_data->nH;
-    realtype Tgas = u_data->Tgas;
-    realtype zeta = u_data->zeta;
-    realtype Av = u_data->Av;
-    realtype omega = u_data->omega;
     realtype mu = u_data->mu;
     realtype gamma = u_data->gamma;
     
-    double Temp = y[IDX_TGAS];
-    double T3 = Temp/1e3;
-    double T5 = Temp/1e5;
-    double T6 = Temp/1e6;
+    realtype Temp = y[IDX_TGAS];
+    realtype Temp3 = Temp/1e3;
+    realtype Temp5 = Temp/1e5;
+    realtype Temp6 = Temp/1e6;
+    realtype npar = GetNumDens(y);
     
     // clang-format on
 
-    // Some variable definitions from krome
-    realtype Te      = Tgas * 8.617343e-5;            // Tgas in eV (eV)
-    realtype lnTe    = log(Te);                       // ln of Te (#)
-    realtype T32     = Tgas * 0.0033333333333333335;  // Tgas/(300 K) (#)
-    realtype invT    = 1.0 / Tgas;                    // inverse of T (1/K)
-    realtype invTe   = 1.0 / Te;                      // inverse of T (1/eV)
-    realtype sqrTgas = sqrt(Tgas);  // Tgas rootsquare (K**0.5)
-
     // reaaction rate (k) of each reaction
     // clang-format off
-    kc[0] = 1.27e-21 * sqrt(Temp) / (1.0 + sqrt(T5)) *
+    kc[0] = 1.27e-21 * sqrt(Temp) / (1.0 + sqrt(Temp5)) *
         exp(-1.578091e5/Temp);
         
-    kc[1] = 9.38e-22 * sqrt(Temp) / (1.0 + sqrt(T5)) *
+    kc[1] = 9.38e-22 * sqrt(Temp) / (1.0 + sqrt(Temp5)) *
         exp(-2.853354e5/Temp);
         
-    kc[2] = 4.95e-22 * sqrt(Temp) / (1.0 + sqrt(T5)) * exp(-6.31515e5/Temp);
+    kc[2] = 4.95e-22 * sqrt(Temp) / (1.0 + sqrt(Temp5)) *
+        exp(-6.31515e5/Temp);
         
-    kc[3] = 5.01e-27 * pow(Temp, -0.1687) / (1.0 + sqrt(T5)) *
+    kc[3] = 5.01e-27 * pow(Temp, -0.1687) / (1.0 + sqrt(Temp5)) *
         exp(-5.5338e4/Temp);
         
-    kc[4] = 8.7e-27 * sqrt(Temp) * pow(T3, -0.2) / (1.0+pow(T6, 0.7));
+    kc[4] = 8.7e-27 * sqrt(Temp) * pow(Temp3, -0.2) / (1.0+pow(Temp6, 0.7));
         
     kc[5] = 1.24e-13 * pow(Temp, -1.5) * exp(-4.7e5/Temp) *
         (1.0+0.3*exp(-9.4e4/Temp));
         
     kc[6] = 1.55e-26 * pow(Temp, 0.3647);
         
-    kc[7] = 3.48e-26 * sqrt(Temp) * pow(T3, -0.2) / (1.0+pow(T6, 0.7));
+    kc[7] = 3.48e-26 * sqrt(Temp) * pow(Temp3, -0.2) / (1.0+pow(Temp6,
+        0.7));
         
-    kc[8] = 7.5e-19 / (1.0+sqrt(T5)) * exp(-1.18348e5 / Temp);
+    kc[8] = 7.5e-19 / (1.0+sqrt(Temp5)) * exp(-1.18348e5 / Temp);
         
-    kc[9] = 9.1e-27 * pow(Temp, -0.1687) / (1.0+sqrt(T5)) *
+    kc[9] = 9.1e-27 * pow(Temp, -0.1687) / (1.0+sqrt(Temp5)) *
         exp(-1.3179e4/Temp);
         
-    kc[10] = 5.54e-17 * pow(Temp, -0.397) / (1.0+sqrt(T5))
+    kc[10] = 5.54e-17 * pow(Temp, -0.397) / (1.0+sqrt(Temp5))
         *exp(-4.73638e5/Temp);
         
     

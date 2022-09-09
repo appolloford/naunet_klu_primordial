@@ -26,16 +26,20 @@ int Fex(realtype t, N_Vector u, N_Vector udot, void *user_data) {
     // clang-format off
     realtype nH = u_data->nH;
     realtype Tgas = u_data->Tgas;
-    realtype zeta = u_data->zeta;
-    realtype Av = u_data->Av;
-    realtype omega = u_data->omega;
     realtype mu = u_data->mu;
     realtype gamma = u_data->gamma;
     
-    double Temp = y[IDX_TGAS];
-    double T3 = Temp/1e3;
-    double T5 = Temp/1e5;
-    double T6 = Temp/1e6;
+    realtype Te = Tgas * 8.617343e-5;
+    realtype lnTe = log(Te);
+    realtype T32 = Tgas / 300.0;
+    realtype invT = 1.0 / Tgas;
+    realtype invTe = 1.0 / Te;
+    realtype sqrTgas = sqrt(Tgas);
+    realtype Temp = y[IDX_TGAS];
+    realtype Temp3 = Temp/1e3;
+    realtype Temp5 = Temp/1e5;
+    realtype Temp6 = Temp/1e6;
+    realtype npar = GetNumDens(y);
     
 #if (NHEATPROCS || NCOOLPROCS)
     if (mu < 0) mu = GetMu(y);
@@ -156,8 +160,7 @@ int Fex(realtype t, N_Vector u, N_Vector udot, void *user_data) {
         y[IDX_HeII]*y[IDX_eM]*y[IDX_eM] - kc[4] * y[IDX_HII]*y[IDX_eM] - kc[5] *
         y[IDX_HeII]*y[IDX_eM] - kc[6] * y[IDX_HeII]*y[IDX_eM] - kc[7] *
         y[IDX_HeIII]*y[IDX_eM] - kc[8] * y[IDX_HI]*y[IDX_eM] - kc[9] *
-        y[IDX_HeII]*y[IDX_eM] - kc[10] * y[IDX_HeII]*y[IDX_eM] ) / kerg /
-        GetNumDens(y);
+        y[IDX_HeII]*y[IDX_eM] - kc[10] * y[IDX_HeII]*y[IDX_eM] ) / kerg / npar;
     
     
 #if ((NHEATPROCS || NCOOLPROCS) && NAUNET_DEBUG)
